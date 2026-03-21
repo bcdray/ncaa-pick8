@@ -13,14 +13,22 @@ def normalize(s):
     return " ".join(s.split())
 
 
+def _strip_seed_suffix(name):
+    """Strip trailing seed annotation e.g. 'VCU - 11' -> 'VCU', 'Utah St - 9' -> 'Utah St'."""
+    return re.sub(r'\s*-\s*\d+\s*$', '', name).strip()
+
+
 def match_team(user_name, espn_teams):
     """Match a user-entered team name to the closest ESPN team name.
 
-    Steps: exact → case-insensitive → normalized → fuzzy (difflib).
+    Steps: strip seed suffix → exact → case-insensitive → normalized → fuzzy (difflib).
     Returns ESPN name string or None if no match found.
     """
     if not user_name:
         return None
+
+    # Strip trailing seed annotation (e.g. "VCU - 11" -> "VCU")
+    user_name = _strip_seed_suffix(user_name)
 
     # Exact match
     if user_name in espn_teams:
