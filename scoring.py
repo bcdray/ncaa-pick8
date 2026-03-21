@@ -201,8 +201,9 @@ def build_scenarios(scored_players):
         root_for.sort(key=lambda x: x["potential"], reverse=True)
 
         # Root against: other players' alive teams NOT shared with this player,
-        # belonging to rivals who could still beat this player
-        root_against = []
+        # belonging to rivals who could still beat this player.
+        # Deduplicated by team — if multiple rivals picked the same team, list once.
+        root_against_map = {}  # espn_name -> entry
         for other in scored_players:
             if other["name"] == player["name"]:
                 continue
@@ -215,16 +216,19 @@ def build_scenarios(scored_players):
                         and pick.get("potential_left", 0) > 0
                         and pick["espn_name"]
                         and pick["espn_name"] not in my_teams):
-                    root_against.append({
-                        "player": other["name"],
-                        "team": pick["espn_name"],
-                        "seed": pick["seed"],
-                        "potential": pick["potential_left"],
-                        "next_opponent": pick.get("next_opponent"),
-                    })
+                    key = pick["espn_name"]
+                    if key not in root_against_map:
+                        root_against_map[key] = {
+                            "team": pick["espn_name"],
+                            "seed": pick["seed"],
+                            "potential": pick["potential_left"],
+                            "next_opponent": pick.get("next_opponent"),
+                            "players": [],
+                        }
+                    if other["name"] not in root_against_map[key]["players"]:
+                        root_against_map[key]["players"].append(other["name"])
 
-        root_against.sort(key=lambda x: x["potential"], reverse=True)
-        root_against = root_against[:6]
+        root_against = sorted(root_against_map.values(), key=lambda x: x["potential"], reverse=True)[:6]
 
         scenarios.append({
             "name": player["name"],
