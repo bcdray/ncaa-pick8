@@ -1,7 +1,7 @@
 # NCAA Pick 8 Pool — Product Requirements Document
 
 ## Overview
-A web dashboard for a March Madness Pick 8 pool that combines player picks from a Google Sheet with live NCAA tournament data from ESPN. Players accumulate points based on how many wins their chosen teams earn, weighted by seed number. The app is deployed on Railway and accessible to all pool participants via a public URL.
+A web dashboard for a March Madness Pick 8 pool that combines player picks from a Google Sheet with live NCAA tournament data from ESPN. The 2026 pool has 24 entries ($480 total pot), placing it in the 20+ prize tier. Players accumulate points based on how many wins their chosen teams earn, weighted by seed number. The app is deployed on Railway and accessible to all pool participants via a public URL.
 
 **Live URL**: https://ncaa-pick8-production.up.railway.app
 
@@ -196,6 +196,7 @@ For each player:
 ├── Dockerfile          # Python 3.11 + gunicorn for Railway
 ├── requirements.txt    # flask, gspread, google-auth, requests, gunicorn
 ├── start.sh            # Gunicorn startup (1 worker, 120s timeout)
+├── streamlit_app.py    # Experimental Streamlit UI (uses same backend modules)
 └── .gitignore
 ```
 
