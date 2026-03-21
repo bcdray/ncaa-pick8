@@ -105,5 +105,25 @@ def fetch_tournament_teams(year=None):
                 else:
                     teams[name]["eliminated"] = True
 
+    # Add next opponent for teams in upcoming/live games
+    for event in all_events.values():
+        competition = event.get("competitions", [{}])[0]
+        state = competition.get("status", {}).get("type", {}).get("state", "pre")
+        if state in ("pre", "in"):
+            competitors = competition.get("competitors", [])
+            names = [
+                c.get("team", {}).get("shortDisplayName", c.get("team", {}).get("displayName", ""))
+                for c in competitors
+            ]
+            if len(names) == 2 and all(names):
+                if names[0] in teams:
+                    teams[names[0]]["next_opponent"] = names[1]
+                if names[1] in teams:
+                    teams[names[1]]["next_opponent"] = names[0]
+
+    # Default next_opponent to None for teams with no scheduled game yet
+    for team in teams.values():
+        team.setdefault("next_opponent", None)
+
     logging.info("Loaded %d tournament teams", len(teams))
     return teams
