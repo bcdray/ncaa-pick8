@@ -1,0 +1,193 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0f1117;
+  color: #e0e0e0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+.header {
+  background: #1a1d2e;
+  border-bottom: 1px solid #2a2d3e;
+  padding: 16px 24px;
+}
+
+.header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.meta {
+  color: #666;
+  font-size: 12px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  background: #13151f;
+  border-bottom: 1px solid #2a2d3e;
+  padding: 0 24px;
+}
+
+.tab {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 12px 20px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.tab:hover { color: #ccc; }
+.tab.active { color: #fff; border-bottom-color: #4f8ef7; }
+
+.tab-content { display: none; padding: 24px; }
+.tab-content.active { display: block; }
+
+/* Pot banner */
+.pot-banner {
+  background: #1a2a1a;
+  border: 1px solid #2a4a2a;
+  border-radius: 8px;
+  color: #6fcf6f;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+}
+
+.prize-breakdown {
+  color: #aaa;
+  font-weight: 400;
+  font-size: 13px;
+  margin-left: 8px;
+}
+
+/* Leaderboard table */
+.leaderboard-table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 700px;
+}
+
+.leaderboard-table th {
+  background: #1a1d2e;
+  border-bottom: 1px solid #2a2d3e;
+  color: #888;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 10px 14px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.leaderboard-table td {
+  border-bottom: 1px solid #1e2030;
+  padding: 12px 14px;
+}
+
+.leaderboard-table tr:hover td { background: #14172a; }
+
+.rank-cell { font-size: 18px; width: 48px; }
+.player-name { font-weight: 600; font-size: 15px; }
+.points { color: #4f8ef7; font-size: 18px; font-weight: 700; }
+.potential { color: #888; }
+
+.rank-1 td { background: #1a1a12; }
+.rank-2 td { background: #181818; }
+.rank-3 td { background: #151515; }
+
+.prize-badge {
+  background: #1a3a1a;
+  border: 1px solid #2a5a2a;
+  border-radius: 4px;
+  color: #6fcf6f;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+}
+
+/* Player cards */
+.player-card {
+  background: #13151f;
+  border: 1px solid #2a2d3e;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.player-card-header {
+  background: #1a1d2e;
+  border-bottom: 1px solid #2a2d3e;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.player-card-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.player-card-stats { font-size: 14px; }
+.player-card-stats strong { color: #4f8ef7; }
+.muted { color: #666; }
+
+/* Picks table */
+.picks-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.picks-table th {
+  background: #0f1117;
+  border-bottom: 1px solid #2a2d3e;
+  color: #666;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 8px 14px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.picks-table td {
+  border-bottom: 1px solid #1a1d2e;
+  padding: 10px 14px;
+}
+
+.picks-table tr:last-child td { border-bottom: none; }
+.picks-table tr:hover td { background: #14172a; }
+
+.team-name { font-weight: 500; }
+.seed-cell { color: #f7a94f; font-weight: 600; }
+.points-cell { color: #4f8ef7; font-weight: 600; }
+.potential-cell { color: #888; }
+
+.eliminated-row td { color: #555; }
+.eliminated-row .team-name { text-decoration: line-through; color: #444; }
+.eliminated-row .seed-cell { color: #444; }
+
+.fuzzy-note {
+  color: #666;
+  font-size: 11px;
+  font-style: italic;
+}
+
+@media (max-width: 600px) {
+  .tab-content { padding: 12px; }
+  .pot-banner { font-size: 12px; }
+  .prize-breakdown { display: block; margin-left: 0; margin-top: 4px; }
+  .leaderboard-table th, .leaderboard-table td { padding: 8px 10px; }
+  .picks-table th, .picks-table td { padding: 7px 10px; }
+}
