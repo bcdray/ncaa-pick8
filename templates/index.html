@@ -15,6 +15,7 @@
   <div class="tabs">
     <button class="tab active" onclick="showTab('leaderboard')">Leaderboard</button>
     <button class="tab" onclick="showTab('picks')">Picks</button>
+    <button class="tab" onclick="showTab('analysis')">Analysis</button>
   </div>
 
   <div id="leaderboard" class="tab-content active">
@@ -23,6 +24,21 @@
 
   <div id="picks" class="tab-content">
     <div id="picks-content">Loading...</div>
+  </div>
+
+  <div id="analysis" class="tab-content">
+    <div id="analysis-content">Loading...</div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal-overlay" class="modal-overlay" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span id="modal-title"></span>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
   </div>
 
   <script>
@@ -35,9 +51,28 @@
       document.getElementById(name).classList.add('active');
     }
 
+    function goToPicks(playerName) {
+      showTab('picks');
+      const id = 'player-' + playerName.replace(/\s+/g, '-');
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     function fmt(n) {
       return '$' + n.toLocaleString();
     }
+
+    function openModal(title, bodyHtml) {
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-body').innerHTML = bodyHtml;
+      document.getElementById('modal-overlay').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('active');
+    }
+
+    // ── Leaderboard ──────────────────────────────────────────────────────────
 
     function renderLeaderboard(data) {
       const { players, prizes, total_pot, num_entries } = data;
@@ -69,7 +104,7 @@
         html += `
           <tr class="${rankClass}">
             <td class="rank-cell">${p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : p.rank}</td>
-            <td class="player-name">${p.name}</td>
+            <td class="player-name"><a class="player-link" onclick="goToPicks('${p.name}')">${p.name}</a></td>
             <td class="points">${p.current_points}</td>
             <td class="potential">${p.potential_left}</td>
             <td>${prizeCell}</td>
@@ -81,6 +116,8 @@
       document.getElementById('leaderboard-content').innerHTML = html;
     }
 
+    // ── Picks ────────────────────────────────────────────────────────────────
+
     function renderPicks(data) {
       const { players } = data;
       let html = '';
@@ -90,7 +127,7 @@
         const seedDisplay = (pick) => pick.seed !== '?' ? `#${pick.seed}` : '?';
 
         html += `
-          <div class="player-card">
+          <div class="player-card" id="player-${p.name.replace(/\s+/g, '-')}">
             <div class="player-card-header">
               <span class="player-card-name">${p.name}</span>
               <span class="player-card-stats">
@@ -136,6 +173,93 @@
       document.getElementById('picks-content').innerHTML = html;
     }
 
+    // ── Analysis (Heat Map) ───────────────────────────────────────────────────
+
+    function renderAnalysis(data) {
+      const { players } = data;
+
+      // Count picks per team and track who picked each
+      const teamCounts = {};  // espn_name -> { count, seed, pickedBy: [names] }
+
+      players.forEach(p => {
+        p.picks.forEach(pick => {
+          const key = pick.espn_name || pick.pick_name;
+          if (!teamCounts[key]) {
+            teamCounts[key] = { count: 0, seed: pick.seed, pickedBy: [] };
+          }
+          teamCounts[key].count++;
+          teamCounts[key].pickedBy.push(p.name);
+        });
+      });
+
+      const teams = Object.entries(teamCounts)
+        .map(([name, d]) => ({ name, ...d }))
+        .sort((a, b) => b.count - a.count || (a.seed === '?' ? 99 : a.seed) - (b.seed === '?' ? 99 : b.seed));
+
+      const maxCount = Math.max(...teams.map(t => t.count), 1);
+      const totalPicks = players.length * 8;
+      const uniqueTeams = teams.length;
+
+      let html = `
+        <div class="analysis-summary">
+          <span>${uniqueTeams} teams picked</span>
+          <span class="muted">·</span>
+          <span>${totalPicks} total picks across ${players.length} players</span>
+          <span class="muted">·</span>
+          <span>Click any tile to see who picked that team</span>
+        </div>
+        <div class="heatmap-grid">
+      `;
+
+      teams.forEach(team => {
+        const intensity = team.count / maxCount;
+        const bg = heatColor(intensity);
+        const seedLabel = team.seed !== '?' ? `#${team.seed}` : '?';
+        const pickLabel = team.count === 1 ? '1 pick' : `${team.count} picks`;
+        const pickedByJson = JSON.stringify(team.pickedBy).replace(/"/g, '&quot;');
+
+        html += `
+          <div class="heatmap-tile" style="background:${bg}"
+               onclick="showTeamPickers('${team.name.replace(/'/g, "\\'")}', ${team.count}, '${seedLabel}', ${pickedByJson})">
+            <div class="heatmap-team">${team.name}</div>
+            <div class="heatmap-seed">${seedLabel}</div>
+            <div class="heatmap-count">${pickLabel}</div>
+            <div class="heatmap-bar">
+              <div class="heatmap-bar-fill" style="width:${Math.round(intensity * 100)}%"></div>
+            </div>
+          </div>
+        `;
+      });
+
+      html += '</div>';
+      document.getElementById('analysis-content').innerHTML = html;
+    }
+
+    function heatColor(intensity) {
+      // 0 = cool blue-gray, 1 = warm orange
+      const r = Math.round(20 + intensity * 220);
+      const g = Math.round(30 + intensity * 100);
+      const b = Math.round(60 - intensity * 30);
+      return `rgb(${r},${g},${b})`;
+    }
+
+    function showTeamPickers(teamName, count, seed, pickedBy) {
+      const pickLabel = count === 1 ? '1 pick' : `${count} picks`;
+      let body = `<p class="modal-meta">Seed ${seed} · ${pickLabel}</p>`;
+      if (pickedBy.length === 0) {
+        body += `<p class="modal-empty">No one picked this team.</p>`;
+      } else {
+        body += '<ul class="modal-list">';
+        pickedBy.forEach(name => {
+          body += `<li><a class="player-link" onclick="closeModal(); goToPicks('${name}')">${name}</a></li>`;
+        });
+        body += '</ul>';
+      }
+      openModal(teamName, body);
+    }
+
+    // ── Refresh ───────────────────────────────────────────────────────────────
+
     async function refresh() {
       try {
         const resp = await fetch('/api/board');
@@ -143,6 +267,7 @@
         boardData = data;
         renderLeaderboard(data);
         renderPicks(data);
+        renderAnalysis(data);
         document.getElementById('meta').textContent =
           `Last updated: ${new Date().toLocaleTimeString()} · Refreshes every 60s`;
       } catch (e) {
