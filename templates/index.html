@@ -16,6 +16,7 @@
     <button class="tab active" onclick="showTab('leaderboard')">Leaderboard</button>
     <button class="tab" onclick="showTab('picks')">Picks</button>
     <button class="tab" onclick="showTab('analysis')">Analysis</button>
+    <button class="tab" onclick="showTab('scenarios')">Scenarios</button>
   </div>
 
   <div id="leaderboard" class="tab-content active">
@@ -28,6 +29,10 @@
 
   <div id="analysis" class="tab-content">
     <div id="analysis-content">Loading...</div>
+  </div>
+
+  <div id="scenarios" class="tab-content">
+    <div id="scenarios-content">Loading...</div>
   </div>
 
   <!-- Modal -->
@@ -259,6 +264,81 @@
       openModal(teamName, body);
     }
 
+    // ── Scenarios ─────────────────────────────────────────────────────────────
+
+    function renderScenarios(data) {
+      const { scenarios } = data;
+      if (!scenarios || scenarios.length === 0) {
+        document.getElementById('scenarios-content').innerHTML = '<p class="muted" style="padding:24px">No scenario data available.</p>';
+        return;
+      }
+
+      let html = '';
+
+      scenarios.forEach(s => {
+        const badge = s.in_contention
+          ? `<span class="badge badge-green">${s.rank === 1 ? '🏆 Leading' : '✅ In Contention'}</span>`
+          : `<span class="badge badge-red">❌ Eliminated</span>`;
+
+        const gap = s.points_needed > 0
+          ? `<span class="scenario-gap">Need <strong>${s.points_needed}</strong> more pts to lead</span>`
+          : '';
+
+        html += `
+          <div class="scenario-card">
+            <div class="scenario-header">
+              <span class="scenario-name">${s.name}</span>
+              <span class="scenario-meta">
+                ${badge}
+                ${gap}
+                <span class="muted">Best case: <strong>${s.best_case} pts</strong></span>
+              </span>
+            </div>
+            <div class="scenario-body">
+        `;
+
+        // Root For
+        if (s.root_for.length > 0) {
+          html += `<div class="scenario-section">
+            <div class="scenario-section-title">🟢 Root For</div>
+            <div class="scenario-teams">`;
+          s.root_for.forEach(t => {
+            const opp = t.next_opponent ? `vs <em>${t.next_opponent}</em> next` : 'next game TBD';
+            html += `
+              <div class="scenario-team-tile">
+                <span class="st-name">${t.team}</span>
+                <span class="st-seed">#${t.seed}</span>
+                <span class="st-potential">+${t.potential} pts possible</span>
+                <span class="st-opp">${opp}</span>
+              </div>`;
+          });
+          html += `</div></div>`;
+        }
+
+        // Root Against
+        if (s.root_against.length > 0) {
+          html += `<div class="scenario-section">
+            <div class="scenario-section-title">🔴 Root Against</div>
+            <div class="scenario-teams">`;
+          s.root_against.forEach(t => {
+            const opp = t.next_opponent ? `vs <em>${t.next_opponent}</em> next` : 'next game TBD';
+            html += `
+              <div class="scenario-team-tile scenario-threat">
+                <span class="st-name">${t.team}</span>
+                <span class="st-seed">#${t.seed}</span>
+                <span class="st-potential threat-pts">+${t.potential} pts for ${t.player}</span>
+                <span class="st-opp">${opp}</span>
+              </div>`;
+          });
+          html += `</div></div>`;
+        }
+
+        html += `</div></div>`;
+      });
+
+      document.getElementById('scenarios-content').innerHTML = html;
+    }
+
     // ── Refresh ───────────────────────────────────────────────────────────────
 
     async function refresh() {
@@ -269,6 +349,7 @@
         renderLeaderboard(data);
         renderPicks(data);
         renderAnalysis(data);
+        renderScenarios(data);
         document.getElementById('meta').textContent =
           `Last updated: ${new Date().toLocaleTimeString()} · Refreshes every 60s`;
       } catch (e) {
