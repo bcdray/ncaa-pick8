@@ -185,7 +185,7 @@
         p.picks.forEach(pick => {
           const key = pick.espn_name || pick.pick_name;
           if (!teamCounts[key]) {
-            teamCounts[key] = { count: 0, seed: pick.seed, pickedBy: [] };
+            teamCounts[key] = { count: 0, seed: pick.seed, points: pick.points, pickedBy: [] };
           }
           teamCounts[key].count++;
           teamCounts[key].pickedBy.push(p.name);
@@ -215,6 +215,7 @@
         const intensity = team.count / maxCount;
         const bg = heatColor(intensity);
         const seedLabel = team.seed !== '?' ? `#${team.seed}` : '?';
+        const ptsLabel = `${team.points} pt${team.points !== 1 ? 's' : ''}`;
         const pickLabel = team.count === 1 ? '1 pick' : `${team.count} picks`;
         const pickedByJson = JSON.stringify(team.pickedBy).replace(/"/g, '&quot;');
 
@@ -222,7 +223,7 @@
           <div class="heatmap-tile" style="background:${bg}"
                onclick="showTeamPickers('${team.name.replace(/'/g, "\\'")}', ${team.count}, '${seedLabel}', ${pickedByJson})">
             <div class="heatmap-team">${team.name}</div>
-            <div class="heatmap-seed">${seedLabel}</div>
+            <div class="heatmap-seed">${seedLabel} · ${ptsLabel}</div>
             <div class="heatmap-count">${pickLabel}</div>
             <div class="heatmap-bar">
               <div class="heatmap-bar-fill" style="width:${Math.round(intensity * 100)}%"></div>
