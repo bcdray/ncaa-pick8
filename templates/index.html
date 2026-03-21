@@ -322,11 +322,12 @@
             <div class="scenario-teams">`;
           s.root_against.forEach(t => {
             const opp = t.next_opponent ? `vs <em>${t.next_opponent}</em> next` : 'next game TBD';
+            const pickers = t.players.join(', ');
             html += `
               <div class="scenario-team-tile scenario-threat">
                 <span class="st-name">${t.team}</span>
                 <span class="st-seed">#${t.seed}</span>
-                <span class="st-potential threat-pts">+${t.potential} pts for ${t.player}</span>
+                <span class="st-potential threat-pts">+${t.potential} pts for ${pickers}</span>
                 <span class="st-opp">${opp}</span>
               </div>`;
           });
