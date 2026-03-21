@@ -94,6 +94,7 @@ def score_picks(picks, teams):
                     "points": points,
                     "eliminated": eliminated,
                     "potential_left": pot,
+                    "next_opponent": team.get("next_opponent"),
                 })
             else:
                 pick_details.append({
@@ -158,3 +159,82 @@ def calculate_prizes(num_entries, entry_fee=20):
         ]
 
     return {"total_pot": total, "prizes": prizes}
+
+
+def build_scenarios(scored_players):
+    """For each player, calculate contention status and what they need to win.
+
+    - in_contention: can they still mathematically win?
+    - best_case: current points + all potential left
+    - points_needed: how many more points to lead right now
+    - root_for: their alive teams sorted by potential (highest first)
+    - root_against: rivals' alive teams (not shared with this player) sorted by threat
+    """
+    if not scored_players:
+        return []
+
+    leader = scored_players[0]
+    leader_current = leader["current_points"]
+
+    scenarios = []
+
+    for player in scored_players:
+        best_case = player["current_points"] + player["potential_left"]
+        in_contention = best_case > leader_current or player["rank"] == 1
+        points_needed = max(0, leader_current - player["current_points"] + 1) if player["rank"] != 1 else 0
+
+        # Teams this player picked (for exclusion in root_against)
+        my_teams = {pick["espn_name"] for pick in player["picks"] if pick["espn_name"]}
+
+        # Root for: own alive teams with points still available
+        root_for = [
+            {
+                "team": pick["espn_name"],
+                "seed": pick["seed"],
+                "wins": pick["wins"],
+                "potential": pick["potential_left"],
+                "next_opponent": pick.get("next_opponent"),
+            }
+            for pick in player["picks"]
+            if not pick["eliminated"] and pick.get("potential_left", 0) > 0 and pick["espn_name"]
+        ]
+        root_for.sort(key=lambda x: x["potential"], reverse=True)
+
+        # Root against: other players' alive teams NOT shared with this player,
+        # belonging to rivals who could still beat this player
+        root_against = []
+        for other in scored_players:
+            if other["name"] == player["name"]:
+                continue
+            other_best = other["current_points"] + other["potential_left"]
+            # Skip rivals who can't possibly beat this player's best case
+            if other_best < player["current_points"] and other["current_points"] < player["current_points"]:
+                continue
+            for pick in other["picks"]:
+                if (not pick["eliminated"]
+                        and pick.get("potential_left", 0) > 0
+                        and pick["espn_name"]
+                        and pick["espn_name"] not in my_teams):
+                    root_against.append({
+                        "player": other["name"],
+                        "team": pick["espn_name"],
+                        "seed": pick["seed"],
+                        "potential": pick["potential_left"],
+                        "next_opponent": pick.get("next_opponent"),
+                    })
+
+        root_against.sort(key=lambda x: x["potential"], reverse=True)
+        root_against = root_against[:6]
+
+        scenarios.append({
+            "name": player["name"],
+            "rank": player["rank"],
+            "current_points": player["current_points"],
+            "best_case": best_case,
+            "in_contention": in_contention,
+            "points_needed": points_needed,
+            "root_for": root_for,
+            "root_against": root_against,
+        })
+
+    return scenarios
