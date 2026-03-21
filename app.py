@@ -4,7 +4,7 @@ import os
 from flask import Flask, jsonify, render_template
 
 from espn import fetch_tournament_teams
-from scoring import calculate_prizes, score_picks
+from scoring import build_scenarios, calculate_prizes, score_picks
 from sheets import load_picks
 
 app = Flask(__name__)
@@ -25,8 +25,11 @@ def board():
     scored = score_picks(picks, teams)
     prize_info = calculate_prizes(len(picks))
 
+    scenarios = build_scenarios(scored)
+
     return jsonify({
         "players": scored,
+        "scenarios": scenarios,
         "prizes": prize_info["prizes"],
         "total_pot": prize_info["total_pot"],
         "num_entries": len(picks),
