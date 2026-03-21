@@ -9,7 +9,7 @@ A web dashboard for a March Madness Pick 8 pool that combines player picks from 
 Running a Pick 8 pool manually requires tracking every team's wins across 63 games, calculating points per player, and updating a leaderboard by hand. Participants have no real-time visibility into standings or how their picks are performing.
 
 ## Solution
-A lightweight web app that reads player picks from a Google Sheet and enriches them with live ESPN tournament data, automatically scoring wins and displaying a real-time leaderboard, picks breakdown, and analysis heat map.
+A lightweight web app that reads player picks from a Google Sheet and enriches them with live ESPN tournament data, automatically scoring wins and displaying a real-time leaderboard, picks breakdown, analysis heat map, and scenario planner.
 
 ## Users
 - **Pool participants** — view standings, track their picks, and see the leaderboard
@@ -42,7 +42,7 @@ A lightweight web app that reads player picks from a Google Sheet and enriches t
 ### 1. Leaderboard Tab
 - Ranked by current points (highest first)
 - Shows: rank, player name, current points, potential points remaining, current prize (if standings held)
-- Player names are clickable — navigates to that player's picks card
+- Player names are clickable — navigates directly to that player's picks card
 - Total pot and prize breakdown shown at top
 
 ### 2. Picks Tab
@@ -53,14 +53,33 @@ A lightweight web app that reads player picks from a Google Sheet and enriches t
 
 ### 3. Analysis Tab (Heat Map)
 - Grid of tiles — one per unique team picked across all players
+- Each tile shows team name, seed, points earned so far, and pick count
 - Tiles color-coded by pick frequency (cool blue → warm orange = most picked)
 - Sorted by most-picked first, then by seed
 - Clicking a tile opens a modal showing which players picked that team
 - Player names in the modal link directly to their picks card
 
-### 4. Auto-Refresh
+### 4. Scenarios Tab
+- One card per player showing their win/elimination status
+- **Root For** — their remaining alive teams sorted by potential points, with next opponent shown
+- **Root Against** — rivals' high-value alive teams they don't share, deduplicated by team with all rival pickers listed (e.g. "+55 pts for Andy P, Leo")
+- Contention badge: 🏆 Leading / ✅ In Contention / ❌ Eliminated
+- Points needed to take the lead shown for players not currently leading
+- Best case score shown for each player
+
+### 5. Auto-Refresh
 - Dashboard refreshes every 60 seconds via JS fetch
+- Server-side cache means most refreshes return instantly (see Caching)
 - Timestamp shown for last update
+
+## Caching
+
+The `/api/board` response is cached in memory for **5 minutes**. This means:
+- First load (or after cache expires) fetches fresh data from Google Sheets + ESPN
+- All subsequent requests within 5 minutes return the cached result instantly
+- Only 1 gunicorn worker runs so all requests share the same cache
+
+Cache TTL is configurable via the `CACHE_TTL_SECONDS` env var (default: `300`).
 
 ## Data Flow
 
@@ -68,6 +87,7 @@ A lightweight web app that reads player picks from a Google Sheet and enriches t
 graph LR
     A["Google Sheet\n(player picks)"] -->|"gspread\nservice account"| B["Flask Backend\n(app.py on Railway)"]
     C["ESPN NCAA API\n(scoreboard)"] -->|"requests\nHTTP GET"| B
+    B -->|"5-min cache"| B
     B -->|"JSON\n/api/board"| D["Web Dashboard\n(index.html)"]
     D -->|"Auto-refresh\nevery 60s"| B
 ```
@@ -80,16 +100,17 @@ graph TD
         subgraph "Flask Backend (app.py)"
             R1["GET /\nRender dashboard"]
             R2["GET /api/board\nReturn combined JSON"]
+            CA["In-memory cache\n5-minute TTL"]
         end
 
         subgraph "Data Sources"
             S["sheets.py\nGoogle Sheets reader"]
-            E["espn.py\nESPN API + team win tracker"]
-            SC["scoring.py\nPoints + prizes + fuzzy matching"]
+            E["espn.py\nESPN API + team win tracker\n+ next opponent lookup"]
+            SC["scoring.py\nPoints + prizes + fuzzy matching\n+ scenario builder"]
         end
 
         subgraph "Frontend"
-            H["index.html\nLeaderboard + Picks + Analysis tabs"]
+            H["index.html\nLeaderboard + Picks + Analysis\n+ Scenarios tabs"]
             CSS["style.css\nDark theme, mobile-responsive"]
         end
     end
@@ -99,9 +120,10 @@ graph TD
         ESPN[("ESPN NCAA\nScoreboard API")]
     end
 
-    R2 --> S
-    R2 --> E
-    R2 --> SC
+    R2 --> CA
+    CA -->|"cache miss"| S
+    CA -->|"cache miss"| E
+    CA -->|"cache miss"| SC
     S --> GS
     E --> ESPN
     R1 --> H
@@ -124,14 +146,14 @@ Column-oriented layout:
 ### Accepted Team Name Formats
 The app handles common entry variations:
 - Exact ESPN name: `VCU`
-- With seed suffix: `VCU - 11` (seed stripped automatically)
+- With seed suffix: `VCU - 11` (seed stripped automatically before matching)
 - Typos: `Miami Onhio` → `Miami OH`
 - Case differences: `Vcu` → `VCU`, `Byu` → `BYU`
 - Curly quotes / special characters: `St. John's` → `St John's`
 
 ## Fuzzy Name Matching
 
-Team name matching uses a 4-step process:
+Team name matching uses a 5-step process:
 
 1. Strip trailing seed annotation (e.g. `VCU - 11` → `VCU`)
 2. Exact match
@@ -146,30 +168,39 @@ Unmatched teams show `seed: "?"` and earn 0 points; the original entered name is
 ```
 current_points = sum(seed × wins) for each picked team
 potential_left  = sum(seed × (6 - wins)) for each picked team still alive
+best_case       = current_points + potential_left
 ```
 
 Teams are pulled from ESPN game results. Win counts exclude First Four games.
+
+## Scenario Logic
+
+For each player:
+- **in_contention**: `best_case > leader's current_points`
+- **points_needed**: `max(0, leader_current - player_current + 1)`
+- **root_for**: alive picks sorted by `potential_left` descending, with `next_opponent` from ESPN upcoming games
+- **root_against**: rivals' alive teams not shared with this player, deduplicated by team, sorted by `potential_left` descending, top 6 shown
 
 ## File Structure
 
 ```
 ~/ncaa-pick8/
-├── app.py              # Flask routes — GET /, /api/board
+├── app.py              # Flask routes — GET /, /api/board + 5-min cache
 ├── sheets.py           # Google Sheets reader (player picks)
-├── espn.py             # ESPN NCAA API fetcher + team win tracker
-├── scoring.py          # Points, potential, prizes, fuzzy matching
+├── espn.py             # ESPN NCAA API fetcher + team wins + next opponent
+├── scoring.py          # Points, potential, prizes, fuzzy matching, scenarios
 ├── templates/
-│   └── index.html      # Dashboard — Leaderboard, Picks, Analysis tabs
+│   └── index.html      # Dashboard — Leaderboard, Picks, Analysis, Scenarios tabs
 ├── static/
 │   └── style.css       # Dark theme, mobile-responsive
 ├── Dockerfile          # Python 3.11 + gunicorn for Railway
 ├── requirements.txt    # flask, gspread, google-auth, requests, gunicorn
-├── start.sh            # Gunicorn startup script
+├── start.sh            # Gunicorn startup (1 worker, 120s timeout)
 └── .gitignore
 ```
 
 ## Tech Stack
-- **Backend**: Python 3.11 + Flask (served via gunicorn)
+- **Backend**: Python 3.11 + Flask (served via gunicorn, 1 worker)
 - **Google Sheets**: gspread + google-auth (service account)
 - **Tournament Data**: ESPN public NCAA scoreboard API (no auth required)
 - **Frontend**: Vanilla HTML/CSS/JS (no framework)
@@ -179,8 +210,8 @@ Teams are pulled from ESPN game results. Win counts exclude First Four games.
 
 ### Railway (Production)
 - **URL**: https://ncaa-pick8-production.up.railway.app
-- **Docker**: Python 3.11-slim + gunicorn
-- **Env vars**: `NCAA_SHEET_ID`, `NCAA_GRID_TAB`, `GOOGLE_CREDENTIALS_B64`, `PORT` (8080)
+- **Docker**: Python 3.11-slim + gunicorn (1 worker)
+- **Env vars**: `NCAA_SHEET_ID`, `NCAA_GRID_TAB`, `GOOGLE_CREDENTIALS_B64`, `PORT` (8080), `CACHE_TTL_SECONDS` (optional)
 - **Auto-deploy**: Pushes to `main` trigger automatic redeploy
 
 ### Local Development
@@ -193,22 +224,24 @@ NCAA_SHEET_ID="<your-sheet-id>" NCAA_GRID_TAB="2026" python app.py
 
 ## Configuration
 
-| Variable | Where | Value |
-|---|---|---|
-| `NCAA_SHEET_ID` | Railway env var | Google Sheet ID |
-| `NCAA_GRID_TAB` | Railway env var | Tab name (e.g. `2026`) |
-| `PORT` | Railway env var | `8080` |
-| `GOOGLE_CREDENTIALS_B64` | Railway env var | Base64-encoded service account JSON |
+| Variable | Where | Default | Description |
+|---|---|---|---|
+| `NCAA_SHEET_ID` | Railway env var | — | Google Sheet ID |
+| `NCAA_GRID_TAB` | Railway env var | `Sheet1` | Tab name (e.g. `2026`) |
+| `PORT` | Railway env var | `8080` | Server port |
+| `GOOGLE_CREDENTIALS_B64` | Railway env var | — | Base64-encoded service account JSON |
+| `CACHE_TTL_SECONDS` | Railway env var | `300` | Cache lifetime in seconds |
 
 ## Known Limitations
-- No caching — every request hits both Google Sheets and ESPN APIs
+- In-memory cache is lost on server restart (cold start will be slow)
 - No authentication — anyone with the URL can view the dashboard
 - ESPN API is undocumented and could change without notice
 - Tournament date window is hardcoded to mid-March through early April of the current year
 - First Four games appear in ESPN data but are excluded from scoring
+- Scenario analysis is mathematical only — does not account for actual bracket matchups beyond next opponent
 
 ## Future Enhancements
-- Highlight the current leader's potential winning scenarios
-- Show which teams are "shared" vs. uniquely picked (competitive insight)
+- Bracket-aware full scenario simulation (Option C) — enumerate outcomes for games involving picked teams only
+- Win probability percentages via Monte Carlo simulation
 - Historical year-over-year comparison
 - Push notifications when standings change
