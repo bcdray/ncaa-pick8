@@ -123,7 +123,7 @@ def run_monte_carlo(picks_list, teams_data, n_sims=10_000):
             "current_points": current_pts,
         })
 
-    results.sort(key=lambda x: x["win_pct"], reverse=True)
+    results.sort(key=lambda x: (x["win_pct"], x["second_pct"], x["third_pct"], x["fourth_pct"]), reverse=True)
     logging.info("Monte Carlo complete: %d sims, %d players", n_sims, n_players)
     return results
 
