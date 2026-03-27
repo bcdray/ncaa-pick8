@@ -17,6 +17,7 @@
     <button class="tab" onclick="showTab('picks')">Picks</button>
     <button class="tab" onclick="showTab('analysis')">Analysis</button>
     <button class="tab" onclick="showTab('scenarios')">Scenarios</button>
+    <button class="tab" onclick="showTab('odds')">Odds</button>
   </div>
 
   <div id="leaderboard" class="tab-content active">
@@ -35,6 +36,10 @@
     <div id="scenarios-content">Loading...</div>
   </div>
 
+  <div id="odds" class="tab-content">
+    <div id="odds-content">Click the Odds tab to run simulation...</div>
+  </div>
+
   <!-- Modal -->
   <div id="modal-overlay" class="modal-overlay" onclick="closeModal()">
     <div class="modal" onclick="event.stopPropagation()">
@@ -48,12 +53,16 @@
 
   <script>
     let boardData = null;
+    let oddsLoaded = false;
 
     function showTab(name) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
       document.querySelector(`.tab[onclick="showTab('${name}')"]`).classList.add('active');
       document.getElementById(name).classList.add('active');
+      if (name === 'odds' && !oddsLoaded) {
+        loadOdds();
+      }
     }
 
     function goToPicks(playerName) {
@@ -338,6 +347,74 @@
       });
 
       document.getElementById('scenarios-content').innerHTML = html;
+    }
+
+    // ── Odds (Monte Carlo) ────────────────────────────────────────────────────
+
+    async function loadOdds() {
+      document.getElementById('odds-content').innerHTML = '<p class="muted" style="padding:24px">Running 10,000 simulations...</p>';
+      try {
+        const resp = await fetch('/api/simulate');
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+        renderOdds(data);
+        oddsLoaded = true;
+      } catch (e) {
+        document.getElementById('odds-content').innerHTML =
+          `<p class="muted" style="padding:24px">Error loading simulation: ${e.message}</p>`;
+      }
+    }
+
+    function renderOdds(data) {
+      const { players, simulations } = data;
+
+      let html = `
+        <div class="odds-banner">
+          🎲 Monte Carlo Simulation &nbsp;·&nbsp; ${simulations.toLocaleString()} runs &nbsp;·&nbsp; 50/50 each remaining game
+          <button class="odds-refresh-btn" onclick="oddsLoaded=false; loadOdds()">↻ Refresh</button>
+        </div>
+        <table class="odds-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Player</th>
+              <th>Win %</th>
+              <th>Top 3 %</th>
+              <th>Best Finish</th>
+              <th>Worst Finish</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      players.forEach((p, i) => {
+        const eliminated = p.eliminated;
+        const rowClass = eliminated ? 'odds-eliminated' : '';
+        const winBar = eliminated ? '' :
+          `<div class="odds-bar"><div class="odds-bar-fill" style="width:${Math.min(p.win_pct, 100)}%"></div></div>`;
+        const winDisplay = eliminated
+          ? '<span class="odds-zero">0%</span>'
+          : `<span class="odds-win-pct">${p.win_pct}%</span>${winBar}`;
+
+        html += `
+          <tr class="${rowClass}">
+            <td class="rank-cell">${i === 0 && !eliminated ? '🥇' : i === 1 && !eliminated ? '🥈' : i === 2 && !eliminated ? '🥉' : i + 1}</td>
+            <td class="player-name"><a class="player-link" onclick="goToPicks('${p.name}')">${p.name}</a></td>
+            <td class="odds-win-cell">${winDisplay}</td>
+            <td class="${eliminated ? '' : 'odds-top3'}">${eliminated ? '—' : p.top3_pct + '%'}</td>
+            <td>${p.best_finish}</td>
+            <td class="muted">${p.worst_finish}</td>
+          </tr>
+        `;
+      });
+
+      html += `
+          </tbody>
+        </table>
+        <p class="odds-note">Assumes equal probability for each remaining game. Results update every 5 minutes.</p>
+      `;
+
+      document.getElementById('odds-content').innerHTML = html;
     }
 
     // ── Refresh ───────────────────────────────────────────────────────────────

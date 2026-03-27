@@ -396,6 +396,107 @@ body {
 
 .modal-list li:last-child { border-bottom: none; }
 
+/* Odds / Monte Carlo */
+.odds-banner {
+  background: #1a1a2e;
+  border: 1px solid #2a2a4e;
+  border-radius: 8px;
+  color: #8888cc;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.odds-refresh-btn {
+  background: #2a2a4e;
+  border: 1px solid #4a4a8e;
+  border-radius: 4px;
+  color: #aaaaee;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  margin-left: auto;
+}
+
+.odds-refresh-btn:hover { background: #3a3a6e; }
+
+.odds-table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 750px;
+}
+
+.odds-table th {
+  background: #1a1d2e;
+  border-bottom: 1px solid #2a2d3e;
+  color: #888;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 10px 14px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.odds-table td {
+  border-bottom: 1px solid #1e2030;
+  padding: 11px 14px;
+  vertical-align: middle;
+}
+
+.odds-table tr:hover td { background: #14172a; }
+
+.odds-win-cell { min-width: 120px; }
+
+.odds-win-pct {
+  color: #4f8ef7;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.odds-zero { color: #444; font-size: 14px; }
+
+.odds-top3 { color: #6fcf6f; font-weight: 600; }
+
+.odds-bar {
+  background: #1e2030;
+  border-radius: 3px;
+  height: 4px;
+  margin-top: 5px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 120px;
+}
+
+.odds-bar-fill {
+  background: #4f8ef7;
+  border-radius: 3px;
+  height: 100%;
+}
+
+.odds-eliminated td {
+  color: #444;
+}
+
+.odds-eliminated .player-name,
+.odds-eliminated .player-link {
+  color: #555;
+  text-decoration: line-through;
+}
+
+.odds-note {
+  color: #555;
+  font-size: 12px;
+  margin-top: 16px;
+  padding-left: 2px;
+}
+
 @media (max-width: 600px) {
   .tab-content { padding: 12px; }
   .pot-banner { font-size: 12px; }
