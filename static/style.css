@@ -462,7 +462,8 @@ body {
 
 .odds-zero { color: #444; font-size: 14px; }
 
-.odds-top3 { color: #6fcf6f; font-weight: 600; }
+.odds-place { color: #6fcf6f; font-weight: 600; }
+.odds-fourth { color: #a0cf6f; }
 
 .odds-bar {
   background: #1e2030;

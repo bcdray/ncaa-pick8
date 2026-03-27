@@ -98,7 +98,9 @@ def run_monte_carlo(picks_list, teams_data, n_sims=10_000):
         name = p["name"]
         counts = place_counts[name]
         wins = counts[0]
-        top3 = sum(counts[:min(3, n_players)])
+        second = counts[1] if n_players > 1 else 0
+        third = counts[2] if n_players > 2 else 0
+        fourth = counts[3] if n_players > 3 else 0
 
         best = next((i + 1 for i, c in enumerate(counts) if c > 0), n_players)
         worst = next((i + 1 for i, c in reversed(list(enumerate(counts))) if c > 0), 1)
@@ -112,7 +114,9 @@ def run_monte_carlo(picks_list, teams_data, n_sims=10_000):
         results.append({
             "name": name,
             "win_pct": round(wins / n_sims * 100, 1),
-            "top3_pct": round(top3 / n_sims * 100, 1),
+            "second_pct": round(second / n_sims * 100, 1),
+            "third_pct": round(third / n_sims * 100, 1),
+            "fourth_pct": round(fourth / n_sims * 100, 1),
             "best_finish": best,
             "worst_finish": worst,
             "eliminated": wins == 0,

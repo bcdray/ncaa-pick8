@@ -378,10 +378,12 @@
             <tr>
               <th>Rank</th>
               <th>Player</th>
-              <th>Win %</th>
-              <th>Top 3 %</th>
-              <th>Best Finish</th>
-              <th>Worst Finish</th>
+              <th>🥇 1st</th>
+              <th>🥈 2nd</th>
+              <th>🥉 3rd</th>
+              <th>4th</th>
+              <th>Best</th>
+              <th>Worst</th>
             </tr>
           </thead>
           <tbody>
@@ -395,15 +397,18 @@
         const winDisplay = eliminated
           ? '<span class="odds-zero">0%</span>'
           : `<span class="odds-win-pct">${p.win_pct}%</span>${winBar}`;
+        const pct = (val) => eliminated ? '—' : val + '%';
 
         html += `
           <tr class="${rowClass}">
             <td class="rank-cell">${i === 0 && !eliminated ? '🥇' : i === 1 && !eliminated ? '🥈' : i === 2 && !eliminated ? '🥉' : i + 1}</td>
             <td class="player-name"><a class="player-link" onclick="goToPicks('${p.name}')">${p.name}</a></td>
             <td class="odds-win-cell">${winDisplay}</td>
-            <td class="${eliminated ? '' : 'odds-top3'}">${eliminated ? '—' : p.top3_pct + '%'}</td>
-            <td>${p.best_finish}</td>
-            <td class="muted">${p.worst_finish}</td>
+            <td class="${eliminated ? '' : 'odds-place'}">${pct(p.second_pct)}</td>
+            <td class="${eliminated ? '' : 'odds-place'}">${pct(p.third_pct)}</td>
+            <td class="${eliminated ? '' : 'odds-place odds-fourth'}">${pct(p.fourth_pct)}</td>
+            <td>${eliminated ? '—' : p.best_finish}</td>
+            <td class="muted">${eliminated ? '—' : p.worst_finish}</td>
           </tr>
         `;
       });
