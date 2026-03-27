@@ -18,6 +18,7 @@ CACHE_TTL = int(os.environ.get("CACHE_TTL_SECONDS", "300"))  # 5 minutes
 _cache = {"data": None, "ts": 0}
 _raw_cache = {"picks": None, "teams": None, "ts": 0}
 _sim_cache = {"data": None, "ts": 0}
+SIM_CACHE_TTL = 3600  # 1 hour
 
 
 @app.route("/")
@@ -62,7 +63,7 @@ def board():
 def simulate():
     now = time.time()
 
-    if _sim_cache["data"] is not None and now - _sim_cache["ts"] < CACHE_TTL:
+    if _sim_cache["data"] is not None and now - _sim_cache["ts"] < SIM_CACHE_TTL:
         logging.info("Serving cached simulation")
         return _sim_cache["data"]
 
